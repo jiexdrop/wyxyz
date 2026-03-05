@@ -1,0 +1,12 @@
+animations {
+  id: "Idle"
+  images {
+    image: "/assets/Sprite-0001.png"
+  }
+  images {
+    image: "/assets/Sprite-0002.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+  fps: 2
+}
+extrude_borders: 2

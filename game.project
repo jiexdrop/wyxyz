@@ -1,0 +1,31 @@
+[bootstrap]
+main_collection = /main/main.collectionc
+render = /render/pixel.renderc
+
+[script]
+shared_state = 1
+
+[display]
+width = 480
+height = 270
+high_dpi = 1
+texture_profiles = /builtins/graphics/default.texture_profiles
+
+[graphics]
+default_texture_min_filter = nearest
+default_texture_mag_filter = nearest
+
+[android]
+input_method = HiddenInputField
+
+[physics]
+gravity_y = -1000.0
+scale = 0.01
+
+[html5]
+scale_mode = stretch
+show_made_with_defold = 0
+
+[project]
+title = Wyxyz
+
