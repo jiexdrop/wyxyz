@@ -57,14 +57,28 @@ function init(self)
 end
 
 local function update_viewport(self, window_w, window_h)
-    -- Largest whole-integer scale that fits the internal res inside the window
     local scale_x = window_w / INTERNAL_WIDTH
     local scale_y = window_h / INTERNAL_HEIGHT
-    local scale   = math.max(1, math.floor(math.min(scale_x, scale_y)))
 
-    -- Pixel-perfect scaled dimensions
-    local scaled_w = INTERNAL_WIDTH  * scale
-    local scaled_h = INTERNAL_HEIGHT * scale
+    -- Integer scale: largest whole multiple that fits
+    local int_scale  = math.max(1, math.floor(math.min(scale_x, scale_y)))
+    local int_scaled_w = INTERNAL_WIDTH  * int_scale
+    local int_scaled_h = INTERNAL_HEIGHT * int_scale
+
+    -- If integer scaling wastes more than one full internal row or column
+    -- (e.g. fullscreen at 1920x1080 with 200x160 internal), fall back to
+    -- fractional best-fit so no large bars appear.
+    local scaled_w, scaled_h
+    local waste_x = window_w - int_scaled_w
+    local waste_y = window_h - int_scaled_h
+    if waste_x >= INTERNAL_WIDTH or waste_y >= INTERNAL_HEIGHT then
+        local scale = math.min(scale_x, scale_y)
+        scaled_w = math.floor(INTERNAL_WIDTH  * scale)
+        scaled_h = math.floor(INTERNAL_HEIGHT * scale)
+    else
+        scaled_w = int_scaled_w
+        scaled_h = int_scaled_h
+    end
 
     -- Center the letterboxed area (integer coords = no sub-pixel blur)
     self.viewport.x = math.floor((window_w - scaled_w) / 2)
