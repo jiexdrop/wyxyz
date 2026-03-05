@@ -1,46 +1,79 @@
 -- pixel.render_script
--- Letterboxing renderer for Defold
--- Draws the game into a letterboxed viewport at the correct pixel scale
+-- Optimized Letterboxing & Integer Scaling for Defold
+--
+-- Setup assumptions:
+--   - Tilemap is placed at world origin (0, 0) in the editor
+--   - No camera component — view stays as identity matrix
+--   - Internal resolution = 200x160 (your tilemap size)
+--   - Window starts at 400x320 (2x scale), resizes freely
+--   - pixel_scale.width / pixel_scale.height set in game.project [custom] section
+--     (if absent, fallback values of 200x160 are used)
 
--- Change these lines to point to your CUSTOM internal resolution
+-- 1. Configuration
+-- INTERNAL = logical game resolution (tilemap size). NOT the window size.
 local INTERNAL_WIDTH  = tonumber(sys.get_config("pixel_scale.width"))  or 200
 local INTERNAL_HEIGHT = tonumber(sys.get_config("pixel_scale.height")) or 160
 
--- Keep the window size for reference if needed
-local WINDOW_WIDTH  = tonumber(sys.get_config("display.width"))  or 400
-local WINDOW_HEIGHT = tonumber(sys.get_config("display.height")) or 320
+if INTERNAL_WIDTH  <= 0 then INTERNAL_WIDTH  = 200 end
+if INTERNAL_HEIGHT <= 0 then INTERNAL_HEIGHT = 160 end
+
+-- Clear color for letterbox bars (from game.project, default black)
+local CLEAR_R = tonumber(sys.get_config("render.clear_color_r")) or 0
+local CLEAR_G = tonumber(sys.get_config("render.clear_color_g")) or 0
+local CLEAR_B = tonumber(sys.get_config("render.clear_color_b")) or 0
+local CLEAR_A = tonumber(sys.get_config("render.clear_color_a")) or 1
 
 function init(self)
+    -- Predicates
     self.tile_pred     = render.predicate({"tile"})
     self.gui_pred      = render.predicate({"gui"})
     self.text_pred     = render.predicate({"text"})
     self.model_pred    = render.predicate({"model"})
     self.particle_pred = render.predicate({"particle"})
+    self.debug_pred    = render.predicate({"debug"})
 
-    self.clear_color = vmath.vector4(
-    sys.get_config("render.clear_color_red",   0),
-    sys.get_config("render.clear_color_green", 0),
-    sys.get_config("render.clear_color_blue",  0),
-    sys.get_config("render.clear_color_alpha", 0)
-)
+    -- Matrices
+    -- No camera: view stays identity forever
+    self.view     = vmath.matrix4()
+    self.identity = vmath.matrix4()
 
-self.view = vmath.matrix4()
+    -- Projection: origin (0,0) = BOTTOM-LEFT corner of the viewport.
+    -- Tilemap at world (0,0) extends right (+X) and up (+Y), filling exactly
+    -- INTERNAL_WIDTH x INTERNAL_HEIGHT pixels. This matches Defold's tile coords.
+    self.internal_proj = vmath.matrix4_orthographic(
+        0, INTERNAL_WIDTH,
+        0, INTERNAL_HEIGHT,
+        -1, 1
+    )
+
+    -- Viewport cache
+    self.viewport      = { x = 0, y = 0, w = 0, h = 0 }
+    self.last_window_w = 0
+    self.last_window_h = 0
+
+    -- Message hashes
+    self.MSG_SET_VIEW_PROJ = hash("set_view_projection")
+    self.MSG_USE_CAM_PROJ  = hash("use_camera_projection")
 end
 
-local function get_letterbox_viewport(window_w, window_h, game_w, game_h)
-    local scale_x = window_w / game_w
-    local scale_y = window_h / game_h
-    local scale   = math.min(scale_x, scale_y)
+local function update_viewport(self, window_w, window_h)
+    -- Largest whole-integer scale that fits the internal res inside the window
+    local scale_x = window_w / INTERNAL_WIDTH
+    local scale_y = window_h / INTERNAL_HEIGHT
+    local scale   = math.max(1, math.floor(math.min(scale_x, scale_y)))
 
-    -- Integer scaling: snap to ×1, ×2, ×3 … (pixel-perfect)
-    scale = math.max(1, math.floor(scale))
+    -- Pixel-perfect scaled dimensions
+    local scaled_w = INTERNAL_WIDTH  * scale
+    local scaled_h = INTERNAL_HEIGHT * scale
 
-    local vw = game_w * scale
-    local vh = game_h * scale
-    local vx = math.floor((window_w - vw) / 2)
-    local vy = math.floor((window_h - vh) / 2)
+    -- Center the letterboxed area (integer coords = no sub-pixel blur)
+    self.viewport.x = math.floor((window_w - scaled_w) / 2)
+    self.viewport.y = math.floor((window_h - scaled_h) / 2)
+    self.viewport.w = scaled_w
+    self.viewport.h = scaled_h
 
-    return vx, vy, vw, vh
+    self.last_window_w = window_w
+    self.last_window_h = window_h
 end
 
 function update(self)
@@ -49,58 +82,46 @@ function update(self)
 
     if window_w == 0 or window_h == 0 then return end
 
-    local vx, vy, vw, vh = get_letterbox_viewport(window_w, window_h, INTERNAL_WIDTH, INTERNAL_HEIGHT)
+    -- Recalculate only on resize
+    if window_w ~= self.last_window_w or window_h ~= self.last_window_h then
+        update_viewport(self, window_w, window_h)
+    end
 
-    -- 1. Clear the full window
+    -- PASS 1: Clear the FULL window (makes letterbox bars the clear color)
     render.set_viewport(0, 0, window_w, window_h)
-    render.set_view(vmath.matrix4())
-    render.set_projection(vmath.matrix4_orthographic(0, window_w, 0, window_h, -1, 1))
-    render.set_depth_mask(true)
     render.clear({
-        [render.BUFFER_COLOR_BIT]   = vmath.vector4(0, 0, 0, 1),
-        [render.BUFFER_DEPTH_BIT]   = 1,
-        [render.BUFFER_STENCIL_BIT] = 0
+        [render.BUFFER_COLOR_BIT] = vmath.vector4(CLEAR_R, CLEAR_G, CLEAR_B, CLEAR_A),
+        [render.BUFFER_DEPTH_BIT] = 1
     })
 
-    -- 2. Draw the game (FIXED NAMES BELOW)
-    render.set_viewport(vx, vy, vw, vh)
-    render.set_view(self.view)
-    render.set_projection(vmath.matrix4_orthographic(
-    0, INTERNAL_WIDTH,   -- Changed from DISPLAY_WIDTH
-    0, INTERNAL_HEIGHT,  -- Changed from DISPLAY_HEIGHT
-    -1, 1
-))
+    -- PASS 2: World — rendered into the centered letterboxed viewport only
+    render.set_viewport(self.viewport.x, self.viewport.y, self.viewport.w, self.viewport.h)
+    render.set_view(self.view)                -- identity: no camera
+    render.set_projection(self.internal_proj) -- maps 0→200, 0→160 onto the viewport
 
-render.set_depth_mask(false)
-render.disable_state(render.STATE_DEPTH_TEST)
-render.disable_state(render.STATE_STENCIL_TEST)
-render.enable_state(render.STATE_BLEND)
-render.set_blend_func(render.BLEND_SRC_ALPHA, render.BLEND_ONE_MINUS_SRC_ALPHA)
-render.disable_state(render.STATE_CULL_FACE)
+    render.enable_state(render.STATE_BLEND)
+    render.set_blend_func(render.BLEND_SRC_ALPHA, render.BLEND_ONE_MINUS_SRC_ALPHA)
+    render.disable_state(render.STATE_CULL_FACE)
+    render.disable_state(render.STATE_DEPTH_TEST)
 
-render.draw(self.tile_pred)
-render.draw(self.particle_pred)
-render.draw(self.model_pred)
-render.draw_debug3d()
+    render.draw(self.tile_pred)
+    render.draw(self.particle_pred)
+    render.draw(self.model_pred)
+    render.draw(self.debug_pred)
+    render.draw_debug3d()
 
--- 3. Draw the GUI (FIXED NAMES BELOW)
-render.set_view(vmath.matrix4())
-render.set_projection(vmath.matrix4_orthographic(
-0, INTERNAL_WIDTH,   -- Changed from DISPLAY_WIDTH
-0, INTERNAL_HEIGHT,  -- Changed from DISPLAY_HEIGHT
--1, 1
-))
-render.draw(self.gui_pred)
-render.draw(self.text_pred)
+    -- PASS 3: GUI — same viewport/projection, identity view for screen-space UI
+    render.set_view(self.identity)
+    render.set_projection(self.internal_proj)
+
+    render.draw(self.gui_pred)
+    render.draw(self.text_pred)
 end
 
-
 function on_message(self, message_id, message)
-    if message_id == hash("clear_color") then
-        self.clear_color = message.color
-    elseif message_id == hash("set_view_projection") then
-        self.view = message.view
-    elseif message_id == hash("use_camera_projection") then
+    -- If you later add a camera, only accept its VIEW (panning/zoom).
+    -- NEVER accept its projection — that would break integer scaling.
+    if message_id == self.MSG_SET_VIEW_PROJ or message_id == self.MSG_USE_CAM_PROJ then
         self.view = message.view
     end
 end
