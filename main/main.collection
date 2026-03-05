@@ -51,8 +51,4 @@ embedded_instances {
   "  component: \"/main/main.tilemap\"\n"
   "}\n"
   ""
-  scale3 {
-    x: 2.0
-    y: 2.0
-  }
 }

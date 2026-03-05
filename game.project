@@ -6,8 +6,8 @@ render = /render/pixel.renderc
 shared_state = 1
 
 [display]
-width = 480
-height = 270
+width = 200
+height = 160
 high_dpi = 1
 texture_profiles = /builtins/graphics/default.texture_profiles
 
