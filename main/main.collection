@@ -12,7 +12,7 @@ embedded_instances {
   }
 }
 embedded_instances {
-  id: "go1"
+  id: "player"
   data: "components {\n"
   "  id: \"player\"\n"
   "  component: \"/main/player.script\"\n"
@@ -62,5 +62,28 @@ embedded_instances {
     x: 100.0
     y: 80.0
     z: 193.137
+  }
+}
+embedded_instances {
+  id: "cat"
+  data: "embedded_components {\n"
+  "  id: \"sprite\"\n"
+  "  type: \"sprite\"\n"
+  "  data: \"default_animation: \\\"Cat_Idle\\\"\\n"
+  "material: \\\"/builtins/materials/sprite.material\\\"\\n"
+  "textures {\\n"
+  "  sampler: \\\"texture_sampler\\\"\\n"
+  "  texture: \\\"/main/main.atlas\\\"\\n"
+  "}\\n"
+  "\"\n"
+  "  position {\n"
+  "    x: -70.0\n"
+  "    y: 62.0\n"
+  "  }\n"
+  "}\n"
+  ""
+  position {
+    x: 232.0
+    z: 0.5
   }
 }
