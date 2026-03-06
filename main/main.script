@@ -1,6 +1,6 @@
+
 function init(self)
 	print("Hello! I am attached to " .. msg.url())
-
 end
 
 function final(self)

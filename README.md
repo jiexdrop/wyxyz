@@ -11,3 +11,10 @@ If you run into trouble, help is available in [our forum](https://forum.defold.c
 Happy Defolding!
 
 ---
+
+Z = (MapHeight/2)/tan(FOV/2)
+FOV/2 = 0.7854/2 = 0.3927
+Z = (160/2)/tan(FOV/2)
+Z = (160/2)/tan(0.3927)
+tan(0.3927) = 0.4142
+Result Z = 80/0.4142 = 193.137
