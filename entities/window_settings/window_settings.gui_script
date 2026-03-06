@@ -1,0 +1,30 @@
+local druid = require("druid.druid")
+
+local function on_sound()
+	print("Button clicked!")
+end
+
+function init(self)
+	self.druid = druid.new(self)
+
+	-- Create your components here
+	self.button = self.druid:new_button("button_sound/root", on_sound)
+
+	--self.text = self.druid:new_text("text_node_id", "Hello, Druid!")
+end
+
+function final(self)
+	self.druid:final()
+end
+
+function update(self, dt)
+	self.druid:update(dt)
+end
+
+function on_message(self, message_id, message, sender)
+	self.druid:on_message(message_id, message, sender)
+end
+
+function on_input(self, action_id, action)
+	return self.druid:on_input(action_id, action)
+end
