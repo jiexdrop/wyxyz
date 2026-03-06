@@ -1,16 +1,41 @@
 local druid = require("druid.druid")
 
-local function on_sound()
-	print("Button clicked!")
+-- Use the 'self' context to manage state properly
+local function on_sound(self)
+	print("Sound button clicked!")
+end
+
+local function on_language(self)
+	print("Language button clicked!")
+end
+
+local function set_gui_visible(self, state)
+	self.visible = state
+
+	-- Define your "Show" alpha and "Hide" alpha
+	local target_alpha = state and 1 or 0
+
+	-- Apply to root. 
+	-- If children have 'Inherit Alpha' checked, 
+	-- they will be 0% visible when root is 0, 
+	-- and 100% of THEIR own alpha when root is 0.5.
+	gui.set_color(self.root, vmath.vector4(1, 1, 1, target_alpha))
+
+	-- Toggle Druid input so buttons don't click while invisible
+	self.button_sound:set_enabled(state)
+	self.button_language:set_enabled(state)
 end
 
 function init(self)
 	self.druid = druid.new(self)
+	self.root = gui.get_node("root")
 
-	-- Create your components here
-	self.button = self.druid:new_button("button_sound/root", on_sound)
+	-- Pass 'self' to callbacks so you can access script data inside them
+	self.button_sound = self.druid:new_button("button_sound/root", on_sound)
+	self.button_language = self.druid:new_button("button_language/root", on_language)
 
-	--self.text = self.druid:new_text("text_node_id", "Hello, Druid!")
+	self.visible = false
+	set_gui_visible(self, false)
 end
 
 function final(self)
@@ -26,5 +51,14 @@ function on_message(self, message_id, message, sender)
 end
 
 function on_input(self, action_id, action)
-	return self.druid:on_input(action_id, action)
+	-- Handle the toggle
+	if action_id == hash("toggle_menu") and action.pressed then
+		set_gui_visible(self, not self.visible)
+		return true
+	end
+
+	-- Only process Druid input if the menu is actually visible
+	if self.visible then
+		return self.druid:on_input(action_id, action)
+	end
 end

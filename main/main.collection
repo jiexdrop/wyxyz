@@ -52,7 +52,7 @@ embedded_instances {
   ""
 }
 embedded_instances {
-  id: "go3"
+  id: "camera"
   data: "components {\n"
   "  id: \"camera\"\n"
   "  component: \"/main/camera.camera\"\n"

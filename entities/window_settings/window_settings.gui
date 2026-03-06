@@ -16,6 +16,11 @@ nodes {
     x: 1200.0
     y: 960.0
   }
+  color {
+    x: 0.0
+    y: 0.0
+    z: 0.0
+  }
   type: TYPE_BOX
   id: "root"
   adjust_mode: ADJUST_MODE_STRETCH
@@ -34,15 +39,15 @@ nodes {
     z: 0.5019608
   }
   type: TYPE_BOX
-  texture: "druid/ui_circle_64"
+  texture: "druid/ui_circle_16"
   id: "window"
   parent: "root"
   inherit_alpha: true
   slice9 {
-    x: 32.0
-    y: 32.0
-    z: 32.0
-    w: 32.0
+    x: 8.0
+    y: 8.0
+    z: 8.0
+    w: 8.0
   }
 }
 nodes {
@@ -59,16 +64,16 @@ nodes {
     z: 0.4
   }
   type: TYPE_BOX
-  texture: "druid/ui_circle_64"
+  texture: "druid/ui_circle_16"
   id: "header"
   pivot: PIVOT_N
   parent: "root"
   inherit_alpha: true
   slice9 {
-    x: 32.0
-    y: 32.0
-    z: 32.0
-    w: 32.0
+    x: 8.0
+    y: 8.0
+    z: 8.0
+    w: 8.0
   }
 }
 nodes {
@@ -125,6 +130,8 @@ nodes {
   type: TYPE_BOX
   id: "button_language/root"
   parent: "button_language"
+  inherit_alpha: true
+  overridden_fields: 21
   template_node_child: true
 }
 nodes {
