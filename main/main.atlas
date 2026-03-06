@@ -20,4 +20,11 @@ animations {
   playback: PLAYBACK_LOOP_FORWARD
   fps: 2
 }
+animations {
+  id: "Bullet"
+  images {
+    image: "/assets/Sprite-0006.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+}
 extrude_borders: 2

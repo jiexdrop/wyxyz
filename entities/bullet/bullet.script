@@ -1,0 +1,20 @@
+-- These allow the factory to "inject" values into the script
+go.property("direction", vmath.vector3(0, 0, 0))
+go.property("speed", 0)
+
+function init(self)
+	-- If the factory didn't provide a direction, default to right
+	if vmath.length(self.direction) == 0 then
+		self.direction = vmath.vector3(1, 0, 0)
+	end
+end
+
+function update(self, dt)
+	local pos = go.get_position()
+	-- Move the bullet along its direction vector
+	pos = pos + self.direction * self.speed * dt
+	go.set_position(pos)
+
+	-- Optional: Delete bullet if it goes off screen to save memory
+	-- if vmath.length(pos) > 2000 then go.delete() end
+end

@@ -2,6 +2,8 @@
 -- Handles player movement using input bindings
 
 local SPEED = 50  -- pixels per second
+local BULLET_FACTORY = "/player#bullet_factory"
+local CAMERA_URL = "/camera#camera"
 
 function init(self)
 	msg.post(".", "acquire_input_focus")
@@ -35,6 +37,56 @@ function on_input(self, action_id, action)
 	-- Normalize to prevent faster diagonal movement
 	if vmath.length(self.input) > 1 then
 		self.input = vmath.normalize(self.input)
+	end
+
+	if action_id == hash("touch") and action.pressed then
+		local player_pos = go.get_position()
+
+		-- 1. Get the View and Projection matrices from the camera
+		local view = camera.get_view(CAMERA_URL)
+		local proj = camera.get_projection(CAMERA_URL)
+
+		-- 2. Create the Inverse View-Projection matrix
+		-- This is the "magic key" that turns screen pixels back into world space
+		local inv_view_proj = vmath.inv(proj * view)
+
+		-- 3. Calculate the Near and Far points in World Space
+		-- We map the screen coordinates (0 to 1 range)
+		local w = sys.get_config_int("display.width")
+		local h = sys.get_config_int("display.height")
+
+		local x = (action.x / w) * 2 - 1
+		local y = (action.y / h) * 2 - 1
+
+		-- Get two points in 3D space to create a ray
+		local n = inv_view_proj * vmath.vector4(x, y, -1, 1)
+		local f = inv_view_proj * vmath.vector4(x, y, 1, 1)
+
+		-- Convert from homogeneous coordinates
+		n = vmath.vector3(n.x / n.w, n.y / n.w, n.z / n.w)
+		f = vmath.vector3(f.x / f.w, f.y / f.w, f.z / f.w)
+
+		-- 4. Ray-Plane Intersection (Find where it hits Z = 0)
+		local t = -n.z / (f.z - n.z)
+		local mouse_world = vmath.vector3(
+		n.x + t * (f.x - n.x),
+		n.y + t * (f.y - n.y),
+		0)
+
+		-- 5. Final Direction and Bullet Spawn
+		local diff = mouse_world - player_pos
+		diff.z = 0 
+
+		if vmath.length(diff) > 0 then
+			local direction = vmath.normalize(diff)
+			local angle = math.atan2(direction.y, direction.x)
+
+			factory.create(
+			BULLET_FACTORY, 
+			player_pos, 
+			vmath.quat_rotation_z(angle), 
+			{ direction = direction, speed = 100 })
+		end
 	end
 end
 
