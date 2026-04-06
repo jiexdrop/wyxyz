@@ -1,12 +1,30 @@
 local druid = require("druid.druid")
 
+local sound = false
+local languages = { "en", "fr", "es"}
+local language_index = 1
+
+local function refresh_texts(self)
+	local text_sound = "Sound " .. (sound and "On" or "Off")
+	self.text_sound:set_text(text_sound)
+
+	local text_language = "Language " .. languages[language_index]
+	self.text_language:set_text(text_language)
+end
 -- Use the 'self' context to manage state properly
 local function on_sound(self)
 	print("Sound button clicked!")
+	sound = not sound
+	refresh_texts(self)
 end
 
 local function on_language(self)
 	print("Language button clicked!")
+	language_index = language_index + 1
+	if language_index > #languages then
+		language_index = 1
+	end
+	refresh_texts(self)
 end
 
 local function set_gui_visible(self, state)
@@ -34,8 +52,12 @@ function init(self)
 	self.button_sound = self.druid:new_button("button_sound/root", on_sound)
 	self.button_language = self.druid:new_button("button_language/root", on_language)
 
+	self.text_sound = self.druid:new_text("button_sound/text")
+	self.text_language = self.druid:new_text("button_language/text")
+
 	self.visible = false
 	set_gui_visible(self, false)
+	refresh_texts(self)
 end
 
 function final(self)
